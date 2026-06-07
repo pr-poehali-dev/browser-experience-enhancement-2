@@ -52,9 +52,20 @@ const vpnLocations = [
   { name: "Япония", flag: "🇯🇵", ping: "124ms", load: 22 },
 ];
 
+const searchEngines = [
+  { name: "Google", icon: "Search", color: "#4285F4", url: "https://www.google.com/search?q=" },
+  { name: "Яндекс", icon: "Search", color: "#FF0000", url: "https://yandex.ru/search/?text=" },
+  { name: "Bing", icon: "Search", color: "#008272", url: "https://www.bing.com/search?q=" },
+  { name: "DuckDuckGo", icon: "Shield", color: "#DE5833", url: "https://duckduckgo.com/?q=" },
+  { name: "YouTube", icon: "Play", color: "#ff3cac", url: "https://www.youtube.com/results?search_query=" },
+  { name: "GitHub", icon: "Code2", color: "#39ff14", url: "https://github.com/search?q=" },
+];
+
 export default function BrowserApp() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [searchValue, setSearchValue] = useState("");
+  const [heroSearch, setHeroSearch] = useState("");
+  const [showEngines, setShowEngines] = useState(false);
   const [vpnEnabled, setVpnEnabled] = useState(false);
   const [vpnLocation, setVpnLocation] = useState(0);
   const [trackerBlock, setTrackerBlock] = useState(true);
@@ -187,13 +198,59 @@ export default function BrowserApp() {
                   <div className="relative flex items-center glass-strong rounded-2xl px-5 py-3.5 border border-white/10 focus-within:border-neon-cyan/40 transition-all">
                     <Icon name="Search" size={18} className="text-white/30 mr-3 shrink-0" />
                     <input
+                      value={heroSearch}
+                      onChange={e => setHeroSearch(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter" && heroSearch.trim()) setShowEngines(true); }}
                       placeholder="Поиск в интернете или адрес сайта..."
                       className="flex-1 bg-transparent text-white/80 placeholder:text-white/25 outline-none text-base"
                     />
-                    <button className="ml-3 px-4 py-1.5 bg-neon-cyan text-[#0a0c14] text-sm font-bold rounded-xl hover:shadow-[0_0_20px_rgba(0,245,255,0.4)] transition-all active:scale-95">
+                    <button
+                      onClick={() => heroSearch.trim() && setShowEngines(true)}
+                      className="ml-3 px-4 py-1.5 bg-neon-cyan text-[#0a0c14] text-sm font-bold rounded-xl hover:shadow-[0_0_20px_rgba(0,245,255,0.4)] transition-all active:scale-95"
+                    >
                       Найти
                     </button>
                   </div>
+
+                  {/* Search engine picker */}
+                  {showEngines && (
+                    <div className="absolute left-0 right-0 top-full mt-3 z-50 animate-slide-up">
+                      <div className="glass-strong rounded-2xl border border-white/10 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs text-white/40 font-medium">Выберите поисковик</p>
+                          <button onClick={() => setShowEngines(false)} className="text-white/25 hover:text-white/60 transition-colors">
+                            <Icon name="X" size={14} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {searchEngines.map((engine, i) => (
+                            <a
+                              key={i}
+                              href={`${engine.url}${encodeURIComponent(heroSearch)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => setShowEngines(false)}
+                              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-transparent hover:border-white/10 transition-all group cursor-pointer"
+                              style={{ background: `${engine.color}10` }}
+                            >
+                              <div
+                                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all group-hover:scale-110"
+                                style={{ background: `${engine.color}20`, border: `1px solid ${engine.color}35` }}
+                              >
+                                <Icon name={engine.icon} size={13} style={{ color: engine.color }} />
+                              </div>
+                              <span className="text-sm text-white/70 group-hover:text-white/95 font-medium transition-colors truncate">{engine.name}</span>
+                            </a>
+                          ))}
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-white/5">
+                          <p className="text-xs text-white/20 text-center truncate">
+                            Поиск: <span className="text-white/40">«{heroSearch}»</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-center gap-6 mt-6">
