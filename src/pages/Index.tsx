@@ -66,6 +66,8 @@ export default function BrowserApp() {
   const [searchValue, setSearchValue] = useState("");
   const [heroSearch, setHeroSearch] = useState("");
   const [showEngines, setShowEngines] = useState(false);
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [iframeLoading, setIframeLoading] = useState(false);
   const [vpnEnabled, setVpnEnabled] = useState(false);
   const [vpnLocation, setVpnLocation] = useState(0);
   const [trackerBlock, setTrackerBlock] = useState(true);
@@ -99,14 +101,20 @@ export default function BrowserApp() {
         </div>
 
         <div className="flex gap-1 shrink-0">
-          <button className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:border-neon-cyan/40 transition-all group">
-            <Icon name="ChevronLeft" size={14} className="text-white/40 group-hover:text-white/80" />
+          <button
+            onClick={() => { setIframeUrl(null); setSearchValue(""); }}
+            className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:border-neon-cyan/40 transition-all group"
+          >
+            <Icon name="ChevronLeft" size={14} className={iframeUrl ? "text-white/80" : "text-white/20"} />
           </button>
           <button className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:border-neon-cyan/40 transition-all group">
-            <Icon name="ChevronRight" size={14} className="text-white/40 group-hover:text-white/80" />
+            <Icon name="ChevronRight" size={14} className="text-white/20" />
           </button>
-          <button className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:border-neon-cyan/40 transition-all group">
-            <Icon name="RotateCw" size={13} className="text-white/40 group-hover:text-white/80" />
+          <button
+            onClick={() => iframeUrl && setIframeLoading(true)}
+            className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:border-neon-cyan/40 transition-all group"
+          >
+            <Icon name="RotateCw" size={13} className={`${iframeUrl ? "text-white/60 group-hover:text-white/80" : "text-white/20"} ${iframeLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
@@ -117,7 +125,16 @@ export default function BrowserApp() {
           <input
             value={searchValue}
             onChange={e => setSearchValue(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && setSearchValue("")}
+            onKeyDown={e => {
+              if (e.key === "Enter" && searchValue.trim()) {
+                const val = searchValue.trim();
+                const url = val.startsWith("http") ? val : `https://www.google.com/search?q=${encodeURIComponent(val)}`;
+                setIframeUrl(url);
+                setSearchValue(url);
+                setIframeLoading(true);
+                setActiveTab("home");
+              }
+            }}
             placeholder="Поиск или введите адрес..."
             className="w-full pl-9 pr-4 py-2 text-sm rounded-xl glass border border-white/10 focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-white/80 placeholder:text-white/25 transition-all bg-transparent"
           />
@@ -177,7 +194,54 @@ export default function BrowserApp() {
           </div>
         </nav>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto relative">
+          {/* IFRAME VIEWER */}
+          {iframeUrl && activeTab === "home" && (
+            <div className="absolute inset-0 z-10 flex flex-col animate-fade-in">
+              {/* iframe top bar */}
+              <div className="flex items-center gap-2 px-3 py-2 glass border-b border-white/5 shrink-0">
+                <button
+                  onClick={() => { setIframeUrl(null); setSearchValue(""); }}
+                  className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:bg-red-500/20 transition-all group"
+                >
+                  <Icon name="X" size={13} className="text-white/40 group-hover:text-red-400" />
+                </button>
+                <button
+                  onClick={() => setIframeLoading(true)}
+                  className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:bg-white/10 transition-all group"
+                >
+                  <Icon name="RotateCw" size={13} className={`text-white/40 group-hover:text-white/80 ${iframeLoading ? "animate-spin" : ""}`} />
+                </button>
+                <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg glass border border-white/8 text-xs text-white/35 truncate">
+                  <Icon name="Lock" size={11} className="text-neon-cyan shrink-0" />
+                  <span className="truncate">{iframeUrl}</span>
+                </div>
+                <a
+                  href={iframeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-7 h-7 rounded-lg glass flex items-center justify-center hover:bg-white/10 transition-all group"
+                  title="Открыть в новой вкладке"
+                >
+                  <Icon name="ExternalLink" size={13} className="text-white/40 group-hover:text-neon-cyan" />
+                </a>
+              </div>
+              {/* Loading bar */}
+              {iframeLoading && (
+                <div className="h-0.5 bg-white/5 shrink-0 overflow-hidden">
+                  <div className="h-full bg-neon-cyan shimmer w-full" style={{ animation: "shimmer 1s linear infinite" }} />
+                </div>
+              )}
+              <iframe
+                src={iframeUrl}
+                className="flex-1 w-full border-0 bg-white"
+                onLoad={() => setIframeLoading(false)}
+                title="Браузер"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+              />
+            </div>
+          )}
+
           {/* HOME */}
           {activeTab === "home" && (
             <div className="min-h-full p-8 animate-fade-in">
@@ -224,12 +288,15 @@ export default function BrowserApp() {
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           {searchEngines.map((engine, i) => (
-                            <a
+                            <button
                               key={i}
-                              href={`${engine.url}${encodeURIComponent(heroSearch)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() => setShowEngines(false)}
+                              onClick={() => {
+                                const url = `${engine.url}${encodeURIComponent(heroSearch)}`;
+                                setIframeUrl(url);
+                                setSearchValue(url);
+                                setIframeLoading(true);
+                                setShowEngines(false);
+                              }}
                               className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-transparent hover:border-white/10 transition-all group cursor-pointer"
                               style={{ background: `${engine.color}10` }}
                             >
@@ -240,7 +307,7 @@ export default function BrowserApp() {
                                 <Icon name={engine.icon} size={13} style={{ color: engine.color }} />
                               </div>
                               <span className="text-sm text-white/70 group-hover:text-white/95 font-medium transition-colors truncate">{engine.name}</span>
-                            </a>
+                            </button>
                           ))}
                         </div>
                         <div className="mt-3 pt-3 border-t border-white/5">
